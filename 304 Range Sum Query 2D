@@ -15,16 +15,18 @@ public class NumMatrix {
         {
             row = matrix.length;
             col = matrix[0].length;
-            int m = getNextPowerOf4(row*col);
-            segmentSumTree = new int[(4*m-1)/3];
+            int m1 = getNextPowerOf2(row);
+            int m2 = getNextPowerOf2(col);
+            int m = Math.max(m1, m2);
+            segmentSumTree = new int[(4*m*m-1)/3];
             buildSegmentSumTree(segmentSumTree, matrix, 0, row-1, 0, col-1, 0);
         }
     }
     
-    private int getNextPowerOf4(int n)
+    private int getNextPowerOf2(int n)
     {
-        int p = (int)(Math.log(n)/Math.log(4));
-        if(n > (int)Math.pow(4, p)) return (int)Math.pow(4, p+1);
+        int p = (int)(Math.log(n)/Math.log(2));
+        if(n > (int)Math.pow(2, p)) return (int)Math.pow(2, p+1);
         else return n;
     }
     
