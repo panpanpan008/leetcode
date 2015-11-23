@@ -1,0 +1,128 @@
+public class NumMatrix {
+
+    private int[] segmentSumTree;
+    private int[] lazy;
+    private int row; 
+    private int col;
+    public NumMatrix(int[][] matrix) {
+        if(matrix == null || matrix.length == 0)
+        {
+            row = 0;
+            col = 0;
+        }
+        else
+        {
+            row = matrix.length;
+            col = matrix[0].length;
+            int m1 = getNextPowerOf2(row);
+            int m2 = getNextPowerOf2(col);
+            int m = Math.max(m1, m2);
+            segmentSumTree = new int[(4*m*m-1)/3];
+            lazy = new int[(4*m*m-1)/3];
+            buildSegmentTree(segmentSumTree, matrix, 0, 0, row-1, col-1, 0);
+        }
+    }
+    
+    private int getNextPowerOf2(int n)
+    {
+        int p = (int)(Math.log(n)/Math.log(2));
+        if(n > (int)Math.pow(2, p)) return (int)Math.pow(2, p+1);
+        else return n;
+    }
+    
+    private void buildSegmentTree(int[] segmentSumTree, int[][] matrix, int rowL, int colL, int rowH, int colH, int pos)
+    {
+        if(rowL > rowH || colL > colH) return;
+        else if(rowL == rowH && colL == colH) segmentSumTree[pos] = matrix[rowL][colL];
+        else
+        {
+            int rowM = rowL + (rowH-rowL)/2;
+            int colM = colL + (colH-colL)/2;
+            buildSegmentTree(segmentSumTree, matrix, rowL, colL, rowM, colM, 4*pos+1);
+            buildSegmentTree(segmentSumTree, matrix, rowL, colM+1, rowM, colH, 4*pos+2);
+            buildSegmentTree(segmentSumTree, matrix, rowM+1, colL, rowH, colM, 4*pos+3);
+            buildSegmentTree(segmentSumTree, matrix, rowM+1, colM+1, rowH, colH, 4*pos+4);
+            segmentSumTree[pos] = segmentSumTree[4*pos+1] + segmentSumTree[4*pos+2] + segmentSumTree[4*pos+3] + segmentSumTree[4*pos+4];
+        }
+    }
+    
+    public void update(int row, int col, int val) {
+        segmentSumTreeLazyUpdate(segmentSumTree, lazy, 0, 0, this.row-1, this.col-1, row, col, val, 0);
+    }
+    
+    private void segmentSumTreeLazyUpdate(int[] segmentSumTree, int[] lazy, int rowL, int colL, int rowH, int colH, int rangeRow, int rangeCol, int val, int pos)
+    {
+        if(rowL > rowH || colL > colH) return;
+        
+        if(lazy[pos] != 0)
+        {
+            segmentSumTree[pos] += lazy[pos];
+            lazy[4*pos+1] += lazy[pos];
+            lazy[4*pos+2] += lazy[pos];
+            lazy[4*pos+3] += lazy[pos];
+            lazy[4*pos+4] += lazy[pos];    
+            lazy[pos] = 0;
+        }
+        
+        if(rangeRow < rowL || rangeRow > rowH || rangeCol < colL || rangeCol > colH) return;
+        else if(rangeRow <= rowL && rangeRow >= rowH && rangeCol <= colL && rangeCol >= colH)
+        {
+            int pre = segmentSumTree[pos];
+            segmentSumTree[pos] = val;
+            int delta = val- pre;
+            if(rowL < rowH || colL < colH)
+            {
+                lazy[4*pos+1] += delta;
+                lazy[4*pos+2] += delta;
+                lazy[4*pos+3] += delta;
+                lazy[4*pos+4] += delta;
+            }
+        }
+        else
+        {
+            int rowM = rowL + (rowH - rowL)/2;
+            int colM = colL + (colH - colL)/2;
+            segmentSumTreeLazyUpdate(segmentSumTree, lazy, rowL, colL, rowM, colM, rangeRow, rangeCol, val, 4*pos+1);
+            segmentSumTreeLazyUpdate(segmentSumTree, lazy, rowL, colM+1, rowM, colH, rangeRow, rangeCol, val, 4*pos+2);
+            segmentSumTreeLazyUpdate(segmentSumTree, lazy, rowM+1, colL, rowH, colM, rangeRow, rangeCol, val, 4*pos+3);
+            segmentSumTreeLazyUpdate(segmentSumTree, lazy, rowM+1, colM+1, rowH, colH, rangeRow, rangeCol, val, 4*pos+4);
+            
+        }
+    }
+    
+    public int sumRegion(int row1, int col1, int row2, int col2) {
+        if(row == 0 || col == 0) return 0;
+        else return segmentSumTreeLazyQuery(segmentSumTree, lazy, 0, 0, this.row-1, this.col-1, row1, col1, row2, col2, 0);
+    }
+    
+    private int segmentSumTreeLazyQuery(int[] segmentSumTree, int[] lazy, int rowL, int colL, int rowH, int colH, int qRowL, int qColL, int qRowH, int qColH, int pos)
+    {
+        if(rowL > rowH || colL > colH) return 0;
+        
+        if(lazy[pos] != 0)
+        {
+            segmentSumTree[pos] += lazy[pos];
+            lazy[4*pos+1] += lazy[pos];
+            lazy[4*pos+2] += lazy[pos];
+            lazy[4*pos+3] += lazy[pos];
+            lazy[4*pos+4] += lazy[pos];    
+            lazy[pos] = 0;
+        }
+        
+        if(qRowL <= rowL && qRowH >= rowH && qColL <= colL && qColH >= colH)
+        {
+            return segmentSumTree[pos];
+        }
+        else if(qRowH < rowL || qRowL > rowH || qColH < colL || qColL > colH) return 0;
+        else
+        {
+            int rowM = rowL + (rowH-rowL)/2;
+            int colM = colL + (colH-colL)/2;
+            int val1 = segmentSumTreeLazyQuery(segmentSumTree, lazy, rowL, colL, rowM, colM, qRowL, qColL, qRowH, qColH, 4*pos+1);
+            int val2 = segmentSumTreeLazyQuery(segmentSumTree, lazy, rowL, colM+1, rowM, colH, qRowL, qColL, qRowH, qColH, 4*pos+2);
+            int val3 = segmentSumTreeLazyQuery(segmentSumTree, lazy, rowM+1, colL, rowH, colM, qRowL, qColL, qRowH, qColH, 4*pos+3);
+            int val4 = segmentSumTreeLazyQuery(segmentSumTree, lazy, rowM+1, colM+1, rowH, colH, qRowL, qColL, qRowH, qColH, 4*pos+4);
+            return val1 + val2 + val3 + val4;
+        }
+    }
+  }
